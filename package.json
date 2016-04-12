@@ -1,0 +1,20 @@
+{
+  "name": "pantheon",
+  "version": "1.0.0",
+  "description": "homework for an interview",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.3.4",
+    "dotenv": "^2.0.0",
+    "lodash": "^4.10.0",
+    "mysql": "^2.10.2",
+    "octonode": "^0.7.5",
+    "parse-link-header": "^0.4.1"
+  },
+  "devDependencies": {}
+}
