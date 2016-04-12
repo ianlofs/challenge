@@ -104,13 +104,12 @@ function transformRepos(repos) {
 }
 
 function insertIntoDB(doc, table) {
-		return pool.getConnectionAsync()
-			.then(conn => {
-				// need to figure out how to do this a head of time, for later
-				var con = Promise.promisifyAll(conn)
-				return con.queryAsync('INSERT INTO ' + table + ' SET ?;', doc)
-					.then(() => {
-						conn.release();
-					});
+	return pool.getConnectionAsync()
+		.then(conn => {
+			// need to figure out how to do this a head of time, for later
+			var con = Promise.promisifyAll(conn)
+			return con.queryAsync('INSERT INTO ' + table + ' SET ?;', doc).then(() => {
+				conn.release();
 			});
+		});
 }
