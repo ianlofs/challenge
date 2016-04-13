@@ -28,13 +28,19 @@ var pool = mysql.createPool({
 // nifty wrap to clean up resources
 function getSqlConnection() {
   return pool.getConnectionAsync().disposer(function(conn) {
-    console.log(conn.sql);
       conn.release();
   });
 }
 
 // main promise pipeline
-ghSearch.reposAsync({
+BBPromise.using(getSqlConnection(), (conn) => {
+  return BBPromise.join(
+    conn.queryAsync('CREATE TABLE projects (name VARCHAR(256), description TEXT, id INTEGER UNSIGNED PRIMARY KEY, owner_id INTEGER UNSIGNED, homepage TEXT, watchers_cnt INTEGER UNSIGNED, forks_cnt INTEGER UNSIGNED, stargazers_cnt INTEGER UNSIGNED);'),
+    conn.queryAsync('CREATE TABLE project_contributors (login VARCHAR(256), id INTEGER UNSIGNED, project_id INTEGER UNSIGNED);')
+  );
+})
+.then(() => {
+  return ghSearch.reposAsync({
   q: 'drupal+in:description+language:php&per_page=100',
   per_page: 100
   })
@@ -42,7 +48,6 @@ ghSearch.reposAsync({
   .map(repo => { return extractAllContributorsForRepo(repo) ;})
   .map(contributorsWithRepo => { return transformData(contributorsWithRepo); })
   .reduce((res1, res2) => {
-    //console.log(res1, res2);
     (res1.contributors || (res1.contributors = [])).push(res2.contributors);
     (res1.repos || (res1.repos = [])).push(res2.repo);
     return res1;
@@ -53,8 +58,10 @@ ghSearch.reposAsync({
       insertIntoDB(repos.repos, 'projects', '`name`, `description`, `id`, `owner_id`, `homepage`, `watchers_cnt`, `forks_cnt`, `stargazers_cnt`')
     );
   })
-  .finally(() => { return cleanUpAndIndexDB(); })
-  .catch(e => {console.log(e.stack)});
+
+})
+.finally(() => { return cleanUpAndIndexDB(); })
+.catch(e => {console.log(e.stack)});;
 
 function insertIntoDB(doc, table, rows) {
   return BBPromise.using(getSqlConnection(), (conn) => {
@@ -63,14 +70,15 @@ function insertIntoDB(doc, table, rows) {
   });
 }
 
-// add indexes for faster read speed, sequential index from id to project_id for joins from
-// projects_contributors on projects, and an index on project_id, so you can lookup contributors
-// project quickly, projects was created with a primary key on id so that should make this indexes
-// work as described
+// add indexes for faster read speed, and faster joins
 function cleanUpAndIndexDB() {
   return BBPromise.using(getSqlConnection(), (conn) => {
-    return BBPromise.join(conn.queryAsync('CREATE INDEX join_index on project_contributors (id, project_id);'),
-                          conn.queryAsync('CREATE INDEX contributor_lookup_index on project_contributors (project_id);')
+    return BBPromise.join(
+      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX join_index(id, project_id);'),
+      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX reverse_join_index(project_id, id);'),
+      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX project_id(project_id);'),
+      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX login(login(256));'),
+      conn.queryAsync('ALTER TABLE projects ADD INDEX name(name(256));')
     )
     .then(() =>{pool.end();})
   });
