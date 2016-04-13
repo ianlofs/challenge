@@ -1,6 +1,4 @@
-# pantheon
-## just a little technical challege for a job interview
-
+# challenge
 ```sh
 git clone
 npm install
