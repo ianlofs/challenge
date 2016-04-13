@@ -33,10 +33,10 @@ function getSqlConnection() {
 }
 
 // main promise pipeline
-BBPromise.using(getSqlConnection(), (conn) => {
+BBPromise.using(getSqlConnection(), getSqlConnection(), (conn1, conn2) => {
   return BBPromise.join(
-    conn.queryAsync('CREATE TABLE projects (name VARCHAR(256), description TEXT, id INTEGER UNSIGNED PRIMARY KEY, owner_id INTEGER UNSIGNED, homepage TEXT, watchers_cnt INTEGER UNSIGNED, forks_cnt INTEGER UNSIGNED, stargazers_cnt INTEGER UNSIGNED);'),
-    conn.queryAsync('CREATE TABLE project_contributors (login VARCHAR(256), id INTEGER UNSIGNED, project_id INTEGER UNSIGNED);')
+    conn1.queryAsync('CREATE TABLE projects (name VARCHAR(256), description TEXT, id INTEGER UNSIGNED PRIMARY KEY, owner_id INTEGER UNSIGNED, homepage TEXT, watchers_cnt INTEGER UNSIGNED, forks_cnt INTEGER UNSIGNED, stargazers_cnt INTEGER UNSIGNED);'),
+    conn2.queryAsync('CREATE TABLE project_contributors (login VARCHAR(256), id INTEGER UNSIGNED, project_id INTEGER UNSIGNED);')
   );
 })
 .then(() => {
