@@ -57,11 +57,10 @@ BBPromise.using(getSqlConnection(), getSqlConnection(), (conn1, conn2) => {
       insertIntoDB(_.flatten(repos.contributors), 'project_contributors', '`login`, `id`, `project_id`'),
       insertIntoDB(repos.repos, 'projects', '`name`, `description`, `id`, `owner_id`, `homepage`, `watchers_cnt`, `forks_cnt`, `stargazers_cnt`')
     );
-  })
-
+  });
 })
 .finally(() => { return cleanUpAndIndexDB(); })
-.catch(e => {console.log(e.stack)});;
+.catch(e => {console.log(e.stack)});
 
 function insertIntoDB(doc, table, rows) {
   return BBPromise.using(getSqlConnection(), (conn) => {
@@ -95,14 +94,13 @@ function extractAllContributorsForRepo(repo) {
         var links;
         var pages = [];
         links = parse(results[1].link);
-        for (var i = 2; i <= links.last.page; i++) {pages.push({page:i})};
-        return BBPromise.map(pages, page => { return repos.contributorsAsync(page)});
+        for (var i = 1; i <= links.last.page; i++) {pages.push({page:i})};
+        return BBPromise.map(pages, page => { return repos.contributorsAsync(page) });
       } else {
         return [[results[0], null]];
       }
     })
-    .map((contributors,index,stuff) => { return contributors[0]; })
-    .reduce((arr1, arr2) => { return arr1.concat(arr2); }, [])
+    .reduce((arr1, arr2) => { return arr1.concat(arr2[0]); }, [])
     .then(arr => { return { contributors: arr, repo: repo } });
 }
 
