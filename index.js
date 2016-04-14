@@ -72,13 +72,16 @@ function insertIntoDB(doc, table, rows) {
 
 // add indexes for faster read speed, and faster joins
 function cleanUpAndIndexDB() {
-  return BBPromise.using(getSqlConnection(), (conn) => {
+  return BBPromise.using(getSqlConnection(),
+  getSqlConnection(), getSqlConnection(),
+  getSqlConnection(), getSqlConnection(),
+  (conn1, conn2, conn3, conn4, conn5) => {
     return BBPromise.join(
-      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX join_index(id, project_id);'),
-      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX reverse_join_index(project_id, id);'),
-      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX project_id(project_id);'),
-      conn.queryAsync('ALTER TABLE project_contributors ADD INDEX login(login(256));'),
-      conn.queryAsync('ALTER TABLE projects ADD INDEX name(name(256));')
+      conn1.queryAsync('ALTER TABLE project_contributors ADD INDEX join_pc_on_pj_idx(id, project_id);'),
+      conn2.queryAsync('ALTER TABLE project_contributors ADD INDEX join_pj_on_pc_idx(project_id, id);'),
+      conn3.queryAsync('ALTER TABLE project_contributors ADD INDEX project_id_idx(project_id);'),
+      conn4.queryAsync('ALTER TABLE project_contributors ADD INDEX login_idx(login(256));'),
+      conn5.queryAsync('ALTER TABLE projects ADD INDEX name_idx(name(256));')
     )
     .then(() =>{pool.end();})
   });
@@ -88,10 +91,9 @@ function extractAllContributorsForRepo(repo) {
   var repos = client.repo(repo.full_name);
   return repos.contributorsAsync({page:1})
     .then(results => {
-      var links;
-      var pages = [];
-      pages.push({page:1});
       if (results[1].link) {
+        var links;
+        var pages = [];
         links = parse(results[1].link);
         for (var i = 2; i <= links.last.page; i++) {pages.push({page:i})};
         return BBPromise.map(pages, page => { return repos.contributorsAsync(page)});
